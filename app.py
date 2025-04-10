@@ -26,6 +26,59 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+def save_user_data_to_db(user_id: int, tg_username: str, full_name: str, user_phone: str, user_email: str):
+    # Чтение существующего файла или создание нового
+    if DB_PATH.exists():
+        with DB_PATH.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        data = {}
+
+    # Сохраняем данные пользователя по user_id
+    data[str(user_id)] = {
+        "tg_username": tg_username,
+        "full_name": full_name,
+        "user_phone": user_phone,
+        "user_email": user_email
+    }
+
+    # Запись данных обратно в файл
+    with DB_PATH.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Получаем данные из WebApp
+    data = update.message.web_app_data.data
+    print(f"Получены данные: {data}")  # Логируем для отладки
+
+    user_id = update.effective_user.id  # Получаем ID пользователя
+
+    if data.startswith("time:"):
+        time_value = data.split("time:")[1]
+        # Сохраняем время в базу
+        save_time_to_db(user_id, time_value)
+        await update.message.reply_text(f"Время сохранено: {time_value}")
+
+    elif data.startswith("user_data:"):
+        # Парсим данные пользователя
+        user_data = data.split("user_data:")[1]
+        user_data_json = json.loads(user_data)
+
+        full_name = user_data_json.get('full_name')
+        user_phone = user_data_json.get('user_phone')
+        user_email = user_data_json.get('user_email')
+        tg_username = update.effective_user.username  # Получаем username Telegram
+
+        # Сохраняем данные пользователя в базу
+        save_user_data_to_db(user_id, tg_username, full_name, user_phone, user_email)
+
+        await update.message.reply_text(f"Данные сохранены: {full_name}, {user_phone}, {user_email}")
+
+    else:
+        await update.message.reply_text("Неверный формат данных.")
+
+
 def save_time_to_db(user_id: int, time: str):
     # Чтение существующего файла или создание нового
     if DB_PATH.exists():
@@ -42,21 +95,6 @@ def save_time_to_db(user_id: int, time: str):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Получаем данные из WebApp
-    data = update.message.web_app_data.data
-    print(f"Получены данные: {data}")  # Логируем для отладки
-
-    user_id = update.effective_user.id  # Получаем ID пользователя
-
-    if data.startswith("time:"):
-        time_value = data.split("time:")[1]
-        save_time_to_db(user_id, time_value)  # Сохраняем данные в базу
-        await update.message.reply_text(f"Время сохранено: {time_value}")
-    else:
-        await update.message.reply_text("Неверный формат данных.")
-
-
 def main():
     # Инициализация бота
     application = Application.builder().token(TELEGRAM_TOKEN).build()
@@ -71,4 +109,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

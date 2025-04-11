@@ -1,0 +1,11 @@
+2025-04-11 00:31:05,523 - aiogram.dispatcher - INFO - Start polling
+2025-04-11 00:31:05,670 - aiogram.dispatcher - INFO - Run polling for bot @Test_Bondio_Bot id=7561870576 - 'test_bondio'
+2025-04-11 00:31:19,182 - __main__ - INFO - Отправлено меню для 952216363
+2025-04-11 00:31:19,182 - aiogram.event - INFO - Update id=514049144 is handled. Duration 171 ms by bot id=7561870576
+2025-04-11 00:32:08,216 - aiogram.dispatcher - INFO - Polling stopped
+2025-04-11 00:32:08,476 - aiogram.dispatcher - INFO - Polling stopped for bot @Test_Bondio_Bot id=7561870576 - 'test_bondio'
+2025-04-11 01:09:46,156 - root - INFO - Бот запущен
+2025-04-11 01:09:46,156 - aiogram.dispatcher - INFO - Start polling
+2025-04-11 01:09:46,318 - aiogram.dispatcher - INFO - Run polling for bot @Test_Bondio_Bot id=7561870576 - 'test_bondio'
+2025-04-11 01:10:00,876 - aiogram.dispatcher - INFO - Polling stopped
+2025-04-11 01:10:01,139 - aiogram.dispatcher - INFO - Polling stopped for bot @Test_Bondio_Bot id=7561870576 - 'test_bondio'

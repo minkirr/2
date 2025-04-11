@@ -1,63 +1,68 @@
-#7561870576:AAHSEpjx1nNH4aa6WBwNEe3MQzmWSsKUOCA
-#https://minkirr.github.io/web2/
+7561870576:AAHSEpjx1nNH4aa6WBwNEe3MQzmWSsKUOCA
 
-
-import json
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from telegram_token import TELEGRAM_TOKEN
-from pathlib import Path
-
-DB_PATH = Path("database.json")
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton(
-            "🕒 Установить время",
-            web_app=WebAppInfo(url="https://minkirr.github.io/web2/")
-        )]
-    ]
-
-    await update.message.reply_text(
-        "Нажмите кнопку, чтобы установить время:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+import json
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import Command
+from aiogram.utils.web_app import check_webapp_signature
 
 
-def save_time_to_db(user_id: int, time: str):
-    if DB_PATH.exists():
-        with DB_PATH.open("r", encoding="utf-8") as f:
-            data = json.load(f)
+bot = Bot(token=TELEGRAM_TOKEN)
+dp = Dispatcher()
+
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message):
+    kb = types.InlineKeyboardMarkup(inline_keyboard=[[
+        types.InlineKeyboardButton(
+            text="Открыть WebApp",
+            web_app=types.WebAppInfo(url="https://minkirr.github.io/web2/")
+        )
+    ]])
+    await message.answer("Тест WebApp:", reply_markup=kb)
+
+@dp.message()
+async def handle_all_messages(message: types.Message):
+    print(f"\n{'='*40}\nПолучено сообщение:")
+    print(f"Тип: {message.content_type}")
+    print(f"Данные: {json.dumps(message.dict(), indent=2, ensure_ascii=False)}")
+
+
+    if message.web_app_data:  # Проверяем наличие WebApp данных
+        try:
+            # Получаем сырые данные напрямую из message.web_app_data
+            webapp_data = message.web_app_data.data
+            print(f"WebApp данные (сырые): {webapp_data}")
+            
+            # Проверяем подпись (если нужно)
+            init_data = message.web_app_data.web_app_init_data
+            if init_data and not check_webapp_signature(TELEGRAM_TOKEN, init_data):
+                await message.answer("❌ Ошибка: Невалидные данные WebApp")
+                return
+            
+            # Парсим JSON данные
+            parsed_data = json.loads(webapp_data)
+            print(f"WebApp данные (парсированные): {parsed_data}")
+            
+            # Записываем в файл
+            with open("received_data.txt", "a", encoding="utf-8") as f:
+                f.write(f"{message.from_user.id}: {parsed_data}\n")
+                
+            await message.answer(f"✅ Получено через WebApp:\n{json.dumps(parsed_data, indent=2, ensure_ascii=False)}")
+            
+        except json.JSONDecodeError:
+            await message.answer("❌ Ошибка: Невалидный JSON в данных WebApp")
+        except Exception as e:
+            logging.exception("Ошибка обработки WebApp данных")
+            await message.answer(f"❌ Произошла ошибка: {str(e)}")
     else:
-        data = {}
+        print("Обычное сообщение")
+        await message.answer(f"📨 Получено: {message.text}")
 
-    data[str(user_id)] = {"time": time}
-
-    with DB_PATH.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-
-async def handle_web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    data = update.message.web_app_data.data
-    user_id = update.effective_user.id
-
-    if data.startswith("time:"):
-        time_value = data.split("time:")[1]
-        save_time_to_db(user_id, time_value)
-        await update.message.reply_text(f"Время сохранено: {time_value}")
-    else:
-        await update.message.reply_text("Неверный формат данных.")
-
-
-def main():
-    application = Application.builder().token(TELEGRAM_TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, handle_web_app_data))
-
-    application.run_polling()
-
+async def main():
+    print("Бот запущен")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

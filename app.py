@@ -1,68 +1,75 @@
-7561870576:AAHSEpjx1nNH4aa6WBwNEe3MQzmWSsKUOCA
-
-from telegram_token import TELEGRAM_TOKEN
-import json
 import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.utils.web_app import check_webapp_signature
+import json
+import asyncio
+from aiogram import Bot, Dispatcher, types, F
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.enums import ContentType, ParseMode
+from aiogram.filters import CommandStart
+import nest_asyncio
 
+logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=TELEGRAM_TOKEN)
+TOKEN = "7399282843:AAF85bKUZdZzHTbSSJOVt8dQFjpILv9UxIU"
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message):
-    kb = types.InlineKeyboardMarkup(inline_keyboard=[[
-        types.InlineKeyboardButton(
-            text="Открыть WebApp",
-            web_app=types.WebAppInfo(url="https://minkirr.github.io/web2/")
-        )
-    ]])
-    await message.answer("Тест WebApp:", reply_markup=kb)
+# Inline-кнопка для раскрытия клавиатуры
+show_button_builder = InlineKeyboardBuilder()
+show_button_builder.add(
+    types.InlineKeyboardButton(
+        text="🔄 Показать кнопку отправки",
+        callback_data="show_webapp_button"
+    )
+)
 
-@dp.message()
-async def handle_all_messages(message: types.Message):
-    print(f"\n{'='*40}\nПолучено сообщение:")
-    print(f"Тип: {message.content_type}")
-    print(f"Данные: {json.dumps(message.dict(), indent=2, ensure_ascii=False)}")
+# Клавиатура с WebApp
+webapp_keyboard = ReplyKeyboardBuilder()
+webapp_keyboard.add(
+    types.KeyboardButton(
+        text="🌐 Отправить данные",
+        web_app=types.WebAppInfo(url="https://strangepineaplle.github.io/lobzik-web/")
+    )
+)
 
+@dp.message(CommandStart())
+async def start(message: types.Message):
+    await message.answer(
+        "Добро пожаловать! Нажмите кнопку ниже, чтобы получить кнопку для отправки данных:",
+        reply_markup=show_button_builder.as_markup()
+    )
 
-    if message.web_app_data:  # Проверяем наличие WebApp данных
-        try:
-            # Получаем сырые данные напрямую из message.web_app_data
-            webapp_data = message.web_app_data.data
-            print(f"WebApp данные (сырые): {webapp_data}")
-            
-            # Проверяем подпись (если нужно)
-            init_data = message.web_app_data.web_app_init_data
-            if init_data and not check_webapp_signature(TELEGRAM_TOKEN, init_data):
-                await message.answer("❌ Ошибка: Невалидные данные WebApp")
-                return
-            
-            # Парсим JSON данные
-            parsed_data = json.loads(webapp_data)
-            print(f"WebApp данные (парсированные): {parsed_data}")
-            
-            # Записываем в файл
-            with open("received_data.txt", "a", encoding="utf-8") as f:
-                f.write(f"{message.from_user.id}: {parsed_data}\n")
-                
-            await message.answer(f"✅ Получено через WebApp:\n{json.dumps(parsed_data, indent=2, ensure_ascii=False)}")
-            
-        except json.JSONDecodeError:
-            await message.answer("❌ Ошибка: Невалидный JSON в данных WebApp")
-        except Exception as e:
-            logging.exception("Ошибка обработки WebApp данных")
-            await message.answer(f"❌ Произошла ошибка: {str(e)}")
-    else:
-        print("Обычное сообщение")
-        await message.answer(f"📨 Получено: {message.text}")
+@dp.callback_query(F.data == "show_webapp_button")
+async def show_webapp_button_handler(callback: types.CallbackQuery):
+    await callback.message.edit_reply_markup()  # Убираем inline-кнопку
+    await callback.message.answer(
+        "Кнопка для отправки данных:",
+        reply_markup=webapp_keyboard.as_markup(resize_keyboard=True)
+    )
+    await callback.answer()
+
+@dp.message(F.content_type == ContentType.WEB_APP_DATA)
+async def handle_webapp_data(message: types.Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        formatted = f'📌 {data["title"]}\n\n📝 {data["desc"]}\n\n{data["text"]}'
+
+        with open('data.txt', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        await message.answer(formatted, parse_mode=ParseMode.HTML)
+        await message.answer("✅ Данные успешно сохранены!")
+    except Exception as e:
+        await message.answer(f"Ошибка: {str(e)}")
 
 async def main():
-    print("Бот запущен")
+    print("bot started")
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    nest_asyncio.apply()
+
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Бот остановлен")

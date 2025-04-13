@@ -1,2 +1,0 @@
-1391336666: {'time': '05:19', 'text': 'fdgfdg', 'method': 'webapp', 'timestamp': '2025-04-10T22:16:40.196Z'}
-1391336666: {'time': '07:20', 'text': 'פאûגא', 'method': 'webapp', 'timestamp': '2025-04-11T01:18:01.423Z'}

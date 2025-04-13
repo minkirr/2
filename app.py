@@ -18,6 +18,7 @@ import gift
 import intense
 import event
 import kovorking
+import meeting
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
@@ -27,7 +28,8 @@ async def start(message: types.Message):
         "подарить сертификат",
         "интенсив",
         "мероприятие",
-        "коворкинг"
+        "коворкинг",
+        "свидание"
     ]
     
     for button in buttons:
@@ -38,6 +40,8 @@ async def start(message: types.Message):
         "Я бот лобзика бла бла помогу выбрать бла бла что вас интересует?",
         reply_markup=builder.as_markup(resize_keyboard=True)
     )
+
+
 
 @dp.message(F.text == "Индивидуальный курс")
 async def handle_individual_course(message: types.Message):
@@ -59,13 +63,33 @@ dp.message.register(gift.handle_webapp_data, F.content_type == ContentType.WEB_A
 async def handle_intensive(message: types.Message):
     await intense.handle(bot, message)
 
+dp.callback_query.register(intense.show_webapp_button_handler, F.data == "show_intense_webapp_button")
+dp.message.register(intense.handle_webapp_data, F.content_type == ContentType.WEB_APP_DATA)
+
+
 @dp.message(F.text == "мероприятие")
 async def handle_event(message: types.Message):
     await event.handle(bot, message)
 
+dp.callback_query.register(event.show_webapp_button_handler, F.data == "show_event_webapp_button")
+dp.message.register(event.handle_webapp_data, F.content_type == ContentType.WEB_APP_DATA)
+
+
 @dp.message(F.text == "коворкинг")
 async def handle_coworking(message: types.Message):
     await kovorking.handle(bot, message)
+
+dp.callback_query.register(kovorking.show_webapp_button_handler, F.data == "show_kovorking_webapp_button")
+dp.message.register(kovorking.handle_webapp_data, F.content_type == ContentType.WEB_APP_DATA)
+
+
+@dp.message(F.text == "свидание")
+async def handle_coworking(message: types.Message):
+    await meeting.handle(bot, message)
+
+dp.callback_query.register(meeting.show_webapp_button_handler, F.data == "show_meeting_button")
+dp.message.register(meeting.handle_webapp_data, F.content_type == ContentType.WEB_APP_DATA)
+
 
 
 
